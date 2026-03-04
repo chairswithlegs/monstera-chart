@@ -1,0 +1,28 @@
+name: Validate Helm chart
+
+on:
+  pull_request:
+    paths:
+      - "chart/**"
+      - ".github/workflows/validate-chart.yaml"
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: "v3.16.0"
+
+      - name: Update chart dependencies
+        run: helm dependency update chart/
+
+      - name: Lint chart
+        run: helm lint chart/
+
+      - name: Template chart
+        run: helm template release chart/ -f chart/ci-values.yaml
