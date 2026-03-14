@@ -1,0 +1,51 @@
+name: Release Helm chart
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          fetch-depth: 0
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Install Helm
+        uses: azure/setup-helm@1a275c3b69536ee54be43f2070a358922e12c8d4
+        with:
+          version: "v3.16.0"
+
+      - name: Update chart dependencies
+        run: helm dependency update chart/
+
+      - name: Package chart
+        run: helm package chart/ --destination .cr-release-packages/
+
+      - name: Upload chart package to release
+        run: gh release upload "${{ github.event.release.tag_name }}" .cr-release-packages/*.tgz
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Install chart-releaser
+        run: |
+          curl -sSLo cr.tar.gz https://github.com/helm/chart-releaser/releases/download/v1.7.0/chart-releaser_1.7.0_linux_amd64.tar.gz
+          tar -xzf cr.tar.gz cr
+
+      - name: Update Helm repo index on gh-pages
+        run: |
+          ./cr index \
+            --owner "${{ github.repository_owner }}" \
+            --git-repo "${{ github.event.repository.name }}" \
+            --token "${{ github.token }}" \
+            --push
