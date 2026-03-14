@@ -44,10 +44,67 @@ spec:
           envFrom:
             - secretRef:
                 name: {{ .Values.server.existingSecret | quote }}
-          {{- if .Values.server.extraEnv }}
           env:
-            {{- toYaml .Values.server.extraEnv | nindent 12 }}
-          {{- end }}
+            - name: INSTANCE_NAME
+              value: {{ .Values.instanceName | quote }}
+            - name: INSTANCE_DOMAIN
+              value: {{ .Values.instanceDomain | quote }}
+            - name: APP_ENV
+              value: {{ .Values.appEnv | quote }}
+            - name: LOG_LEVEL
+              value: {{ .Values.logLevel | quote }}
+            - name: MONSTERA_UI_URL
+              value: {{ include "monstera.ui.url" . | quote }}
+            - name: CACHE_DRIVER
+              value: memory
+            - name: DATABASE_HOST
+              value: {{ include "monstera.db.host" . | quote }}
+            - name: DATABASE_PORT
+              value: {{ .Values.database.port | quote }}
+            - name: DATABASE_NAME
+              value: {{ .Values.database.name | quote }}
+            {{- if .Values.nats.enabled }}
+            - name: NATS_URL
+              value: {{ include "monstera.nats.url" . | quote }}
+            {{- end }}
+            - name: MEDIA_DRIVER
+              value: {{ .Values.media.driver | quote }}
+            - name: MEDIA_BASE_URL
+              value: {{ .Values.media.baseUrl | quote }}
+            - name: MEDIA_MAX_BYTES
+              value: {{ .Values.media.maxBytes | quote }}
+            {{- if .Values.media.cdnBase }}
+            - name: MEDIA_CDN_BASE
+              value: {{ .Values.media.cdnBase | quote }}
+            {{- end }}
+            {{- if eq .Values.media.driver "local" }}
+            - name: MEDIA_LOCAL_PATH
+              value: {{ .Values.media.localPath | quote }}
+            {{- else if eq .Values.media.driver "s3" }}
+            - name: MEDIA_S3_BUCKET
+              value: {{ required "media.s3.bucket is required when media.driver is s3" .Values.media.s3.bucket | quote }}
+            - name: MEDIA_S3_REGION
+              value: {{ required "media.s3.region is required when media.driver is s3" .Values.media.s3.region | quote }}
+            {{- if .Values.media.s3.endpoint }}
+            - name: MEDIA_S3_ENDPOINT
+              value: {{ .Values.media.s3.endpoint | quote }}
+            {{- end }}
+            {{- end }}
+            - name: EMAIL_DRIVER
+              value: {{ .Values.email.driver | quote }}
+            - name: EMAIL_FROM
+              value: {{ .Values.email.from | quote }}
+            - name: EMAIL_FROM_NAME
+              value: {{ .Values.email.fromName | quote }}
+            {{- if eq .Values.email.driver "smtp" }}
+            - name: EMAIL_SMTP_HOST
+              value: {{ required "email.smtp.host is required when email.driver is smtp" .Values.email.smtp.host | quote }}
+            - name: EMAIL_SMTP_PORT
+              value: {{ .Values.email.smtp.port | quote }}
+            {{- end }}
+            {{- with .Values.server.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
           {{- if and (eq .Values.media.driver "local") .Values.media.persistence.enabled }}
           volumeMounts:
             - name: media

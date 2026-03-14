@@ -1,0 +1,31 @@
+name: Generate Helm chart docs
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "chart/values.yaml"
+      - ".github/workflows/docs.yaml"
+
+permissions:
+  contents: write
+
+jobs:
+  generate-docs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+
+      - name: Generate docs
+        run: npx --yes @bitnami/readme-generator-for-helm@2.7.2 -v chart/values.yaml -r chart/README.md
+
+      - name: Commit updated README
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git diff --quiet && exit 0
+          git add chart/README.md
+          git commit -m "docs: regenerate chart README from values.yaml [skip ci]"
+          git pull --rebase origin $GITHUB_HEAD_REF
+          git push origin HEAD:${GITHUB_HEAD_REF}

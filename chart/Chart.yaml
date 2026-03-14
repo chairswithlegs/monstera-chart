@@ -3,7 +3,6 @@ name: monstera
 description: Monstera - self-hosted ActivityPub / Mastodon-compatible server
 type: application
 version: 0.1.0
-appVersion: "0.1.0"
 keywords:
   - activitypub
   - mastodon

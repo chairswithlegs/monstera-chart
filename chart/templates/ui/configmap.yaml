@@ -8,7 +8,5 @@ metadata:
 data:
   config.json: |
     {
-      "server_url": {{ .Values.ui.config.server_url | quote }},
-      "auth_client_id": {{ .Values.ui.config.auth_client_id | quote }},
-      "auth_scopes": {{ .Values.ui.config.auth_scopes | quote }}
+      "server_url": {{ include "monstera.server.url" . | quote }}
     }

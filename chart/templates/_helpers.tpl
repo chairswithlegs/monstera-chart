@@ -61,8 +61,41 @@ UI image
 {{- end }}
 
 {{/*
+Server URL (public API base URL, always uses instanceDomain)
+*/}}
+{{- define "monstera.server.url" -}}
+{{- printf "https://%s" .Values.instanceDomain }}
+{{- end }}
+
+{{/*
+UI URL (falls back to instanceDomain if uiDomain is not set)
+*/}}
+{{- define "monstera.ui.url" -}}
+{{- $domain := .Values.uiDomain | default .Values.instanceDomain }}
+{{- printf "https://%s" $domain }}
+{{- end }}
+
+{{/*
 Media PVC name (for local storage)
 */}}
 {{- define "monstera.server.mediaPvcName" -}}
 {{- printf "%s-media" (include "monstera.server.fullname" .) }}
+{{- end }}
+
+{{/*
+DB Host (uses bundled postgresql service name when enabled, otherwise falls back to database.host)
+*/}}
+{{- define "monstera.db.host" -}}
+{{- if .Values.postgresql.enabled -}}
+{{- printf "%s-postgresql" .Release.Name }}
+{{- else -}}
+{{- .Values.database.host }}
+{{- end }}
+{{- end }}
+
+{{/*
+NATS URL for bundled NATS (no authentication; cluster-internal only)
+*/}}
+{{- define "monstera.nats.url" -}}
+{{- printf "nats://%s-nats:4222" .Release.Name }}
 {{- end }}
