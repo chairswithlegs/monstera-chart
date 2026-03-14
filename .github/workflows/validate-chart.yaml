@@ -3,7 +3,7 @@ name: Validate Helm chart
 on:
   pull_request:
     paths:
-      - "chart/**"
+      - "charts/**"
       - ".github/workflows/validate-chart.yaml"
 
 jobs:
@@ -19,10 +19,10 @@ jobs:
           version: "v3.16.0"
 
       - name: Update chart dependencies
-        run: helm dependency update chart/
+        run: helm dependency update charts/monstera/
 
       - name: Lint chart
-        run: helm lint chart/
+        run: helm lint charts/monstera/
 
       - name: Template chart
-        run: helm template release chart/ -f chart/ci-values.yaml
+        run: helm template release charts/monstera/ -f charts/monstera/ci-values.yaml
