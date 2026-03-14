@@ -1,0 +1,29 @@
+apiVersion: v1
+entries:
+  monstera:
+  - apiVersion: v2
+    created: "2026-03-14T17:25:56.957643064Z"
+    dependencies:
+    - condition: postgresql.enabled
+      name: postgresql
+      repository: https://charts.bitnami.com/bitnami
+      version: 15.x.x
+    - condition: nats.enabled
+      name: nats
+      repository: https://nats-io.github.io/k8s/helm/charts/
+      version: 2.x.x
+    description: Monstera - self-hosted ActivityPub / Mastodon-compatible server
+    digest: 5fbd66bf69ee2049a535ca34aa84b94487bdaf455661fcda3488e46e38ed1de5
+    home: https://github.com/chairswithlegs/monstera
+    keywords:
+    - activitypub
+    - mastodon
+    - fediverse
+    name: monstera
+    sources:
+    - https://github.com/chairswithlegs/monstera
+    type: application
+    urls:
+    - https://github.com/chairswithlegs/monstera-chart/releases/download/monstera-0.1.0/monstera-0.1.0.tgz
+    version: 0.1.0
+generated: "2026-03-14T17:25:56.957652814Z"
