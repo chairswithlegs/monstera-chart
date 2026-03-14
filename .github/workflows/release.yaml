@@ -42,10 +42,28 @@ jobs:
           curl -sSLo cr.tar.gz https://github.com/helm/chart-releaser/releases/download/v1.7.0/chart-releaser_1.7.0_linux_amd64.tar.gz
           tar -xzf cr.tar.gz cr
 
+      - name: Checkout gh-pages branch
+        run: |
+          git fetch origin gh-pages
+          git worktree add gh-pages origin/gh-pages
+
+      - name: Copy packaged chart to gh-pages
+        run: |
+          mkdir -p gh-pages/.cr-release-packages
+          cp .cr-release-packages/*.tgz gh-pages/.cr-release-packages/
+
       - name: Update Helm repo index on gh-pages
         run: |
-          ./cr index \
+          cd gh-pages
+          ../cr index \
             --owner "${{ github.repository_owner }}" \
             --git-repo "${{ github.event.repository.name }}" \
             --token "${{ github.token }}" \
             --push
+
+      - name: Commit and push changes to gh-pages
+        run: |
+          cd gh-pages
+          git add .
+          git commit -m "Update Helm repo index [skip ci]" || echo "No changes to commit"
+          git push origin gh-pages
