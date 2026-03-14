@@ -21,7 +21,7 @@ server:
   existingSecret: ""
   image:
     ## @param server.image.repository Server container image repository
-    repository: ghcr.io/chairswithlegs/monstera
+    repository: ghcr.io/chairswithlegs/monstera/server
     ## @param server.image.tag Server container image tag
     tag: latest
     ## @param server.image.pullPolicy Server container image pull policy
@@ -61,7 +61,7 @@ server:
 ui:
   image:
     ## @param ui.image.repository UI container image repository
-    repository: ghcr.io/chairswithlegs/monstera-ui
+    repository: ghcr.io/chairswithlegs/monstera/ui
     ## @param ui.image.tag UI container image tag
     tag: latest
     ## @param ui.image.pullPolicy UI container image pull policy
@@ -97,6 +97,9 @@ database:
 postgresql:
   ## @param postgresql.enabled Deploy the Bitnami PostgreSQL subchart. When false, supply database.host in values and DATABASE_USERNAME/DATABASE_PASSWORD in the server secret.
   enabled: true
+  image:
+    ## @param postgresql.image.repository PostgreSQL container image repository
+    repository: bitnamilegacy/postgresql
   auth:
     ## @param postgresql.auth.existingSecret Secret containing DATABASE_PASSWORD for the bundled PostgreSQL. Set to the same value as server.existingSecret.
     existingSecret: ""
@@ -121,6 +124,9 @@ postgresql:
 nats:
   ## @param nats.enabled Deploy the NATS subchart with JetStream. When false, supply NATS_URL in the server secret. When true, NATS_URL is injected automatically (no auth by default; add nats.config.merge.authorization to enable auth).
   enabled: true
+  natsBox:
+    ## @param nats.natsBox.enabled Deploy the NATS Box subchart. When false, supply NATS_URL in the server secret. When true, NATS_URL is injected automatically (no auth by default; add nats.config.merge.authorization to enable auth).
+    enabled: false
   config:
     jetstream:
       ## @param nats.config.jetstream.enabled Enable JetStream
