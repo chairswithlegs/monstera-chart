@@ -27,4 +27,4 @@ jobs:
           git diff --quiet && exit 0
           git add chart/README.md
           git commit -m "docs: regenerate chart README from values.yaml [skip ci]"
-          git push
+          git push origin HEAD:${GITHUB_HEAD_REF}
