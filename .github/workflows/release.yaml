@@ -1,8 +1,11 @@
 name: Release Helm chart
 
 on:
-  release:
-    types: [published]
+  push:
+    branches: [main]
+    paths:
+      - "chart/**"
+      - ".github/workflows/release.yaml"
 
 permissions:
   contents: write
@@ -26,4 +29,4 @@ jobs:
         env:
           CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
         with:
-          charts_dir: charts
+          charts_dir: .
