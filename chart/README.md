@@ -54,13 +54,13 @@ helm install monstera chart/ -f myvalues.yaml -n <namespace>
 
 ### Global
 
-| Name             | Description                                                          | Value        |
-| ---------------- | -------------------------------------------------------------------- | ------------ |
-| `instanceName`   | Display name for the instance, shown in the UI and API responses     | `Monstera`   |
-| `instanceDomain` | Public hostname of the instance (e.g. social.example.com). Required. | `""`         |
-| `uiDomain`       | Hostname for the UI. Defaults to instanceDomain if empty.            | `""`         |
-| `appEnv`         | Application environment. Use `production` for live deployments.      | `production` |
-| `logLevel`       | Log verbosity. One of: debug, info, warn, error.                     | `info`       |
+| Name             | Description                                                              | Value        |
+| ---------------- | ------------------------------------------------------------------------ | ------------ |
+| `instanceName`   | Display name for the instance, shown in the UI and API responses testing | `Monstera`   |
+| `instanceDomain` | Public hostname of the instance (e.g. social.example.com). Required.     | `""`         |
+| `uiDomain`       | Hostname for the UI. Defaults to instanceDomain if empty.                | `""`         |
+| `appEnv`         | Application environment. Use `production` for live deployments.          | `production` |
+| `logLevel`       | Log verbosity. One of: debug, info, warn, error.                         | `info`       |
 
 ### Server
 
