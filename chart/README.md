@@ -10,130 +10,169 @@ Helm chart for deploying [Monstera](https://github.com/chairswithlegs/monstera):
 
 ## Creating the server Secret (required)
 
-The server and the optional migration Job read **all** configuration from a single Secret. The chart does **not** create this Secret; you must create it before installing or upgrading. The server and migration Job will not start until this Secret exists.
+The server reads all sensitive configuration from a single Secret you create before installing. The chart does **not** create this Secret.
 
 ### Required keys
 
-Your Secret must contain at least these keys (as plain key/value; the server reads them as environment variables):
+| Key | Required when | Description |
+|-----|---------------|-------------|
+| `SECRET_KEY_BASE` | Always | 64+ hex characters for signing and key derivation |
+| `DATABASE_USERNAME` | Always | PostgreSQL username |
+| `DATABASE_PASSWORD` | Always | PostgreSQL password |
+| `NATS_URL` | `nats.enabled` is `false` | NATS server URL (bundled URL is injected automatically when enabled) |
+| `EMAIL_SMTP_USERNAME` | `email.driver` is `smtp` | SMTP username |
+| `EMAIL_SMTP_PASSWORD` | `email.driver` is `smtp` | SMTP password |
 
-| Key | Description |
-|-----|-------------|
-| `DATABASE_URL` | PostgreSQL connection string |
-| `NATS_URL` | NATS server URL (with credentials if NATS uses auth) |
-| `SECRET_KEY_BASE` | 64+ hex characters for signing and key derivation |
-| `INSTANCE_DOMAIN` | Public hostname (e.g. `social.example.com`) |
-| `MEDIA_BASE_URL` | Base URL for media (e.g. `https://social.example.com/media`) |
-| `EMAIL_FROM` | From address for outgoing email |
-
-Optional keys (see Monstera docs / `internal/config`): `MEDIA_DRIVER`, `MEDIA_LOCAL_PATH`, `EMAIL_DRIVER`, `APP_ENV`, `APP_PORT`, `LOG_LEVEL`, `UI_DOMAIN`, `NATS_CREDS_FILE`, and others.
-
-**Important:** `SECRET_KEY_BASE` must be at least 64 hex characters (32 bytes). Generate one with:
+Generate a strong `SECRET_KEY_BASE` with:
 
 ```bash
 openssl rand -hex 32
 ```
 
-### When using the chart’s PostgreSQL
-
-- The service name is `<release-name>-postgresql` (e.g. `monstera-postgresql` if release is `monstera`).
-- Use the same username, password, and database as in `postgresql.auth` in your values.
-- Example (replace `<release>`, `<namespace>`, user, password, and db with your values):
-
-  ```
-  postgres://monstera:YOUR_PASSWORD@<release>-postgresql.<namespace>.svc.cluster.local:5432/monstera_fed?sslmode=disable
-  ```
-
-  In the same namespace you can use the short form:
-
-  ```
-  postgres://monstera:YOUR_PASSWORD@<release>-postgresql:5432/monstera_fed?sslmode=disable
-  ```
-
-- PostgreSQL is always deployed with username/password authentication; do not use an empty or trust URL.
-
-### When using the chart’s NATS
-
-- The service name is `<release-name>-nats` (e.g. `monstera-nats`).
-- NATS is configured with authentication (username/password in the chart’s `nats.config.merge.authorization`). Use the **same** username and password in `NATS_URL`.
-- Example:
-
-  ```
-  nats://monstera:YOUR_NATS_PASSWORD@<release>-nats:4222
-  ```
-
-- Override the default NATS password in values (e.g. `nats.config.merge.authorization.users[0].password`) and use that same value in your Secret’s `NATS_URL`.
-
 ### Example: create the Secret with kubectl
-
-Create the Secret in the same namespace where you will install the chart. The name must match `server.existingSecret` in your values (e.g. `monstera-server-env`).
 
 ```bash
 kubectl create secret generic monstera-server-env \
-  --from-literal=DATABASE_URL='postgres://monstera:YOUR_DB_PASSWORD@monstera-postgresql:5432/monstera_fed?sslmode=disable' \
-  --from-literal=NATS_URL='nats://monstera:YOUR_NATS_PASSWORD@monstera-nats:4222' \
   --from-literal=SECRET_KEY_BASE="$(openssl rand -hex 32)" \
-  --from-literal=INSTANCE_DOMAIN=social.example.com \
-  --from-literal=MEDIA_BASE_URL=https://social.example.com/media \
-  --from-literal=EMAIL_FROM=noreply@example.com
+  --from-literal=DATABASE_USERNAME=monstera \
+  --from-literal=DATABASE_PASSWORD=YOUR_DB_PASSWORD
 ```
 
-Or from an env file (no quotes in the file; one `KEY=value` per line):
-
-```bash
-kubectl create secret generic monstera-server-env --from-env-file=monstera.env
-```
+Set `server.existingSecret: monstera-server-env` in your values file.
 
 ## Install
 
 1. Create the server Secret (see above) in the target namespace.
-2. Add the chart (if using from repo) or use the local `chart/` directory.
-3. Update dependencies and install:
+2. Update dependencies and install:
 
 ```bash
-cd chart
-helm dependency update
-helm install monstera . -f myvalues.yaml -n <namespace>
+helm dependency update chart/
+helm install monstera chart/ -f myvalues.yaml -n <namespace>
 ```
 
-Set `server.existingSecret` in `myvalues.yaml` to the name of the Secret you created (e.g. `monstera-server-env`).
+## Parameters
 
-## Configuration
+### Global
 
-### Key values
+| Name             | Description                                                          | Value        |
+| ---------------- | -------------------------------------------------------------------- | ------------ |
+| `instanceName`   | Display name for the instance, shown in the UI and API responses     | `Monstera`   |
+| `instanceDomain` | Public hostname of the instance (e.g. social.example.com). Required. | `""`         |
+| `uiDomain`       | Hostname for the UI. Defaults to instanceDomain if empty.            | `""`         |
+| `appEnv`         | Application environment. Use `production` for live deployments.      | `production` |
+| `logLevel`       | Log verbosity. One of: debug, info, warn, error.                     | `info`       |
 
-| Value | Description |
-|-------|-------------|
-| `server.existingSecret` | **Required.** Name of the Secret containing server env (DATABASE_URL, NATS_URL, etc.). |
-| `postgresql.enabled` | If `true`, deploy PostgreSQL with the chart. If `false`, you must provide `DATABASE_URL` in your Secret. |
-| `nats.enabled` | If `true`, deploy NATS with the chart (JetStream + auth). If `false`, you must provide `NATS_URL` in your Secret. |
-| `instanceDomain` | Instance hostname (can also be set only in the Secret as `INSTANCE_DOMAIN`). |
-| `ui.config.server_url` | Public API URL for the UI (e.g. `https://social.example.com`). |
-| `media.driver` | `local` (chart provisions a PVC) or `s3`. |
-| `media.persistence.storageClass` | Optional. StorageClass for the local media PVC; omit for cluster default. |
-| `media.persistence.size` | Size of the local media PVC (e.g. `10Gi`). |
-| `ingress.enabled` | Set to `true` and set `ingress.hosts` (and optionally `ingress.tls`) to expose the app. |
-| `migrationJob.enabled` | If `true`, run a pre-install/pre-upgrade Job that executes migrations. |
+### Server
 
-### Securing PostgreSQL and NATS
+| Name                         | Description                                                                                                                                                                                                                                                                      | Value                             |
+| ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------- |
+| `server.existingSecret`      | Name of a pre-existing Secret containing sensitive server config. Always required: SECRET_KEY_BASE, DATABASE_USERNAME, DATABASE_PASSWORD. Also required when nats.enabled is false: NATS_URL. Also required when email.driver is smtp: EMAIL_SMTP_USERNAME, EMAIL_SMTP_PASSWORD. | `""`                              |
+| `server.image.repository`    | Server container image repository                                                                                                                                                                                                                                                | `ghcr.io/chairswithlegs/monstera` |
+| `server.image.tag`           | Server container image tag                                                                                                                                                                                                                                                       | `latest`                          |
+| `server.image.pullPolicy`    | Server container image pull policy                                                                                                                                                                                                                                               | `IfNotPresent`                    |
+| `server.replicaCount`        | Number of server pod replicas                                                                                                                                                                                                                                                    | `1`                               |
+| `server.resources`           | CPU/memory resource requests and limits for the server container                                                                                                                                                                                                                 | `{}`                              |
+| `server.extraEnv`            | Extra environment variables to inject into server pods                                                                                                                                                                                                                           | `[]`                              |
+| `server.ingress.enabled`     | Enable Ingress for the server API                                                                                                                                                                                                                                                | `false`                           |
+| `server.ingress.className`   | Ingress class name for the server Ingress                                                                                                                                                                                                                                        | `""`                              |
+| `server.ingress.annotations` | Annotations for the server Ingress                                                                                                                                                                                                                                               | `{}`                              |
+| `server.ingress.hosts`       | Host rules for the server Ingress. Each entry defines a `host` and `paths` array (path, pathType). Default paths: /api, /oauth, /.well-known, /users, /inbox.                                                                                                                    | `[]`                              |
+| `server.ingress.tls`         | TLS configuration for the server Ingress                                                                                                                                                                                                                                         | `[]`                              |
 
-- **PostgreSQL:** The chart always configures Bitnami PostgreSQL with username/password (`postgresql.auth`). Use the same credentials in your Secret’s `DATABASE_URL`. For production, consider `postgresql.auth.existingSecret` so the password comes from an existing Secret.
-- **NATS:** The chart enables NATS with authentication via `nats.config.merge.authorization.users`. Override the default password and use the same credentials in your Secret’s `NATS_URL`.
+### UI
 
-### Local media and StorageClass
+| Name                     | Description                                                                                                     | Value                                |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------- | ------------------------------------ |
+| `ui.image.repository`    | UI container image repository                                                                                   | `ghcr.io/chairswithlegs/monstera-ui` |
+| `ui.image.tag`           | UI container image tag                                                                                          | `latest`                             |
+| `ui.image.pullPolicy`    | UI container image pull policy                                                                                  | `IfNotPresent`                       |
+| `ui.ingress.enabled`     | Enable Ingress for the UI                                                                                       | `false`                              |
+| `ui.ingress.className`   | Ingress class name for the UI Ingress                                                                           | `""`                                 |
+| `ui.ingress.annotations` | Annotations for the UI Ingress                                                                                  | `{}`                                 |
+| `ui.ingress.hosts`       | Host rules for the UI Ingress. Each entry defines a `host` and `paths` array (path, pathType). Default path: /. | `[]`                                 |
+| `ui.ingress.tls`         | TLS configuration for the UI Ingress                                                                            | `[]`                                 |
 
-When `media.driver` is `local`, the chart creates a PVC for the server. You can optionally set `media.persistence.storageClass` to use a specific StorageClass; leave it empty to use the cluster default. Set `media.persistence.size` (e.g. `10Gi`) as needed.
+### Database
+
+| Name            | Description                                                              | Value      |
+| --------------- | ------------------------------------------------------------------------ | ---------- |
+| `database.name` | PostgreSQL database name                                                 | `monstera` |
+| `database.port` | PostgreSQL port                                                          | `5432`     |
+| `database.host` | External PostgreSQL hostname. Required when postgresql.enabled is false. | `""`       |
+
+### PostgreSQL
+
+| Name                                     | Description                                                                                                                                      | Value  |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ | ------ |
+| `postgresql.enabled`                     | Deploy the Bitnami PostgreSQL subchart. When false, supply database.host in values and DATABASE_USERNAME/DATABASE_PASSWORD in the server secret. | `true` |
+| `postgresql.auth.existingSecret`         | Secret containing DATABASE_PASSWORD for the bundled PostgreSQL. Set to the same value as server.existingSecret.                                  | `""`   |
+| `postgresql.primary.persistence.enabled` | Enable persistence for the PostgreSQL primary pod                                                                                                | `true` |
+| `postgresql.primary.persistence.size`    | PVC size for PostgreSQL data                                                                                                                     | `10Gi` |
+
+### NATS
+
+| Name                                      | Description                                                                                                                                                                                                        | Value   |
+| ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------- |
+| `nats.enabled`                            | Deploy the NATS subchart with JetStream. When false, supply NATS_URL in the server secret. When true, NATS_URL is injected automatically (no auth by default; add nats.config.merge.authorization to enable auth). | `true`  |
+| `nats.config.jetstream.enabled`           | Enable JetStream                                                                                                                                                                                                   | `true`  |
+| `nats.config.jetstream.fileStore.enabled` | Enable file-backed JetStream storage                                                                                                                                                                               | `true`  |
+| `nats.config.jetstream.fileStore.dir`     | Directory for JetStream file storage                                                                                                                                                                               | `/data` |
+| `nats.config.jetstream.pvc.enabled`       | Enable PVC for JetStream persistence                                                                                                                                                                               | `true`  |
+| `nats.config.jetstream.pvc.size`          | PVC size for JetStream data                                                                                                                                                                                        | `10Gi`  |
+
+### Media
+
+| Name                             | Description                                                                                           | Value         |
+| -------------------------------- | ----------------------------------------------------------------------------------------------------- | ------------- |
+| `media.driver`                   | Media storage driver. `local` provisions a PVC on the server pod; `s3` uses an S3-compatible service. | `local`       |
+| `media.baseUrl`                  | Base URL for serving media files (e.g. https://social.example.com/media). Required.                   | `""`          |
+| `media.localPath`                | Mount path for local media storage. Required when driver is local.                                    | `/data/media` |
+| `media.cdnBase`                  | Optional CDN base URL. When set, media links use this prefix instead of baseUrl.                      | `""`          |
+| `media.maxBytes`                 | Maximum upload size in bytes.                                                                         | `10485760`    |
+| `media.s3.bucket`                | S3 bucket name. Required when driver is s3.                                                           | `""`          |
+| `media.s3.region`                | S3 region. Required when driver is s3.                                                                | `""`          |
+| `media.s3.endpoint`              | S3-compatible endpoint URL. Optional; leave empty for AWS S3. Set for non-AWS providers (e.g. MinIO). | `""`          |
+| `media.persistence.enabled`      | Enable PVC for local media storage                                                                    | `true`        |
+| `media.persistence.size`         | PVC size for local media                                                                              | `10Gi`        |
+| `media.persistence.storageClass` | StorageClass for the media PVC. Leave empty to use the cluster default.                               | `""`          |
+
+### Email
+
+| Name              | Description                                                                                                                             | Value      |
+| ----------------- | --------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
+| `email.driver`    | Email driver. `noop` disables sending; `smtp` sends via SMTP (supply EMAIL_SMTP_USERNAME and EMAIL_SMTP_PASSWORD in the server secret). | `noop`     |
+| `email.from`      | Sender address for outgoing email. Required when driver is smtp.                                                                        | `""`       |
+| `email.fromName`  | Display name for the sender. Defaults to the instance name.                                                                             | `Monstera` |
+| `email.smtp.host` | SMTP server hostname. Required when driver is smtp.                                                                                     | `""`       |
+| `email.smtp.port` | SMTP server port.                                                                                                                       | `587`      |
+
+## Configuration notes
+
+### Bundled PostgreSQL
+
+When `postgresql.enabled: true`, the chart injects `DATABASE_HOST` automatically. Set `postgresql.auth.existingSecret` to the same value as `server.existingSecret` so the bundled PostgreSQL reads `DATABASE_PASSWORD` from the same secret as the server. The default DB username is `monstera` — set `DATABASE_USERNAME: monstera` in your secret (or override `postgresql.auth.username` to a different value and match it in the secret).
+
+### Bundled NATS
+
+When `nats.enabled: true`, the chart injects `NATS_URL` automatically pointing to the bundled instance (no auth). To add authentication, configure `nats.config.merge.authorization` and override `NATS_URL` via `server.extraEnv`.
 
 ### External PostgreSQL or NATS
 
-Set `postgresql.enabled: false` or `nats.enabled: false` and put the correct `DATABASE_URL` or `NATS_URL` in your server Secret (pointing at your own Postgres/NATS).
+Set `postgresql.enabled: false` or `nats.enabled: false` and supply the credentials in your server Secret (`DATABASE_USERNAME`, `DATABASE_PASSWORD`, or `NATS_URL`).
+
+### Local media and StorageClass
+
+When `media.driver: local`, the chart creates a PVC for the server. Set `media.persistence.storageClass` to use a specific StorageClass; leave empty for the cluster default.
+
+### S3 media
+
+Set `media.driver: s3` and configure `media.s3.bucket`, `media.s3.region`, and (for non-AWS providers like MinIO) `media.s3.endpoint` in your values. S3 credentials are supplied via the AWS SDK credential chain (IAM role, `AWS_ACCESS_KEY_ID`/`AWS_SECRET_ACCESS_KEY` env vars, etc.).
 
 ## Upgrading
 
 1. Ensure the server Secret exists and is up to date.
-2. Run `helm dependency update` if Chart.yaml or dependencies changed.
-3. Run `helm upgrade monstera . -f myvalues.yaml -n <namespace>`.
-
-The migration Job (if enabled) runs as a pre-upgrade hook and will run before the new server pods are created.
+2. Run `helm dependency update chart/` if Chart.yaml dependencies changed.
+3. Run `helm upgrade monstera chart/ -f myvalues.yaml -n <namespace>`.
 
 ## Uninstall
 
@@ -141,7 +180,7 @@ The migration Job (if enabled) runs as a pre-upgrade hook and will run before th
 helm uninstall monstera -n <namespace>
 ```
 
-Note: The server Secret you created is not removed by Helm; delete it manually if desired.
+The server Secret you created is not removed by Helm; delete it manually if desired.
 
 ## More
 

@@ -1,80 +1,180 @@
 # Default values for the Monstera Helm chart.
 # IMPORTANT: This chart relies on secrets being created before installation (see README).
 
+## @section Global
+
+## @param instanceName Display name for the instance, shown in the UI and API responses
 instanceName: Monstera
-instanceDomain: ""   # e.g. social.example.com (required)
-uiDomain: ""         # defaults to instanceDomain if empty
+## @param instanceDomain Public hostname of the instance (e.g. social.example.com). Required.
+instanceDomain: ""
+## @param uiDomain Hostname for the UI. Defaults to instanceDomain if empty.
+uiDomain: ""
+## @param appEnv Application environment. Use `production` for live deployments.
 appEnv: production
+## @param logLevel Log verbosity. One of: debug, info, warn, error.
 logLevel: info
 
-# -- Server (API)
+## @section Server
+
 server:
-  # Name of the Secret containing server env (DATABASE_URL, NATS_URL, SECRET_KEY_BASE, etc.). Required.
+  ## @param server.existingSecret Name of a pre-existing Secret containing sensitive server config. Always required: SECRET_KEY_BASE, DATABASE_USERNAME, DATABASE_PASSWORD. Also required when nats.enabled is false: NATS_URL. Also required when email.driver is smtp: EMAIL_SMTP_USERNAME, EMAIL_SMTP_PASSWORD.
   existingSecret: ""
   image:
+    ## @param server.image.repository Server container image repository
     repository: ghcr.io/chairswithlegs/monstera
+    ## @param server.image.tag Server container image tag
     tag: latest
+    ## @param server.image.pullPolicy Server container image pull policy
     pullPolicy: IfNotPresent
+  ## @param server.replicaCount Number of server pod replicas
   replicaCount: 1
+  ## @param server.resources [object] CPU/memory resource requests and limits for the server container
   resources: {}
+  ## @param server.extraEnv [array] Extra environment variables to inject into server pods
   extraEnv: []
+  ingress:
+    ## @param server.ingress.enabled Enable Ingress for the server API
+    enabled: false
+    ## @param server.ingress.className Ingress class name for the server Ingress
+    className: ""
+    ## @param server.ingress.annotations [object] Annotations for the server Ingress
+    annotations: {}
+    ## @param server.ingress.hosts [array] Host rules for the server Ingress. Each entry defines a `host` and `paths` array (path, pathType). Default paths: /api, /oauth, /.well-known, /users, /inbox.
+    hosts:
+      - host: ""
+        paths:
+          - path: /api
+            pathType: Prefix
+          - path: /oauth
+            pathType: Prefix
+          - path: /.well-known
+            pathType: Prefix
+          - path: /users
+            pathType: Prefix
+          - path: /inbox
+            pathType: Prefix
+    ## @param server.ingress.tls [array] TLS configuration for the server Ingress
+    tls: []
 
-# -- UI (Next.js static + nginx)
+## @section UI
+
 ui:
   image:
+    ## @param ui.image.repository UI container image repository
     repository: ghcr.io/chairswithlegs/monstera-ui
+    ## @param ui.image.tag UI container image tag
     tag: latest
+    ## @param ui.image.pullPolicy UI container image pull policy
     pullPolicy: IfNotPresent
-  config:
-    server_url: ""    # e.g. https://social.example.com (public API URL for the UI)
-    auth_client_id: ui-client
-    auth_scopes: "admin:read admin:write read:accounts"
+  ingress:
+    ## @param ui.ingress.enabled Enable Ingress for the UI
+    enabled: false
+    ## @param ui.ingress.className Ingress class name for the UI Ingress
+    className: ""
+    ## @param ui.ingress.annotations [object] Annotations for the UI Ingress
+    annotations: {}
+    ## @param ui.ingress.hosts [array] Host rules for the UI Ingress. Each entry defines a `host` and `paths` array (path, pathType). Default path: /.
+    hosts:
+      - host: ""
+        paths:
+          - path: /
+            pathType: Prefix
+    ## @param ui.ingress.tls [array] TLS configuration for the UI Ingress
+    tls: []
 
-# -- PostgreSQL (optional; when disabled, use your own and set DATABASE_URL in the server secret)
+## @section Database
+
+database:
+  ## @param database.name PostgreSQL database name
+  name: monstera
+  ## @param database.port PostgreSQL port
+  port: 5432
+  ## @param database.host External PostgreSQL hostname. Required when postgresql.enabled is false.
+  host: ""
+
+## @section PostgreSQL
+
 postgresql:
+  ## @param postgresql.enabled Deploy the Bitnami PostgreSQL subchart. When false, supply database.host in values and DATABASE_USERNAME/DATABASE_PASSWORD in the server secret.
   enabled: true
   auth:
+    ## @param postgresql.auth.existingSecret Secret containing DATABASE_PASSWORD for the bundled PostgreSQL. Set to the same value as server.existingSecret.
+    existingSecret: ""
+    ## @skip postgresql.auth.secretKeys.userPasswordKey
+    secretKeys:
+      userPasswordKey: DATABASE_PASSWORD
+    # Internal: used by Bitnami to bootstrap the DB user and database at init time.
+    # Override only if you need non-default values; ensure DATABASE_USERNAME in your secret matches auth.username.
+    ## @skip postgresql.auth.username
     username: monstera
-    password: ""      # set on install; use same in server secret DATABASE_URL
-    database: monstera_fed
+    ## @skip postgresql.auth.database
+    database: monstera  # should match database.name
   primary:
     persistence:
+      ## @param postgresql.primary.persistence.enabled Enable persistence for the PostgreSQL primary pod
       enabled: true
+      ## @param postgresql.primary.persistence.size PVC size for PostgreSQL data
       size: 10Gi
 
-# -- NATS (optional; when disabled, use your own and set NATS_URL in the server secret)
+## @section NATS
+
 nats:
+  ## @param nats.enabled Deploy the NATS subchart with JetStream. When false, supply NATS_URL in the server secret. When true, NATS_URL is injected automatically (no auth by default; add nats.config.merge.authorization to enable auth).
   enabled: true
   config:
     jetstream:
+      ## @param nats.config.jetstream.enabled Enable JetStream
       enabled: true
       fileStore:
+        ## @param nats.config.jetstream.fileStore.enabled Enable file-backed JetStream storage
         enabled: true
+        ## @param nats.config.jetstream.fileStore.dir Directory for JetStream file storage
         dir: /data
       pvc:
+        ## @param nats.config.jetstream.pvc.enabled Enable PVC for JetStream persistence
         enabled: true
+        ## @param nats.config.jetstream.pvc.size PVC size for JetStream data
         size: 10Gi
-    merge:
-      authorization:
-        users:
-          - user: "monstera"
-            password: "changeme"   # MUST override; use same in server secret NATS_URL (e.g. nats://monstera:PASSWORD@release-nats:4222)
 
-# -- Media (local = chart provisions PVC; s3 = use your own S3)
+## @section Media
+
 media:
+  ## @param media.driver Media storage driver. `local` provisions a PVC on the server pod; `s3` uses an S3-compatible service.
   driver: local
+  ## @param media.baseUrl Base URL for serving media files (e.g. https://social.example.com/media). Required.
+  baseUrl: ""
+  ## @param media.localPath Mount path for local media storage. Required when driver is local.
   localPath: /data/media
-  baseUrl: ""         # e.g. https://social.example.com/media (often set via secret MEDIA_BASE_URL)
+  ## @param media.cdnBase Optional CDN base URL. When set, media links use this prefix instead of baseUrl.
+  cdnBase: ""
+  ## @param media.maxBytes Maximum upload size in bytes.
+  maxBytes: 10485760
+  s3:
+    ## @param media.s3.bucket S3 bucket name. Required when driver is s3.
+    bucket: ""
+    ## @param media.s3.region S3 region. Required when driver is s3.
+    region: ""
+    ## @param media.s3.endpoint S3-compatible endpoint URL. Optional; leave empty for AWS S3. Set for non-AWS providers (e.g. MinIO).
+    endpoint: ""
   persistence:
+    ## @param media.persistence.enabled Enable PVC for local media storage
     enabled: true
+    ## @param media.persistence.size PVC size for local media
     size: 10Gi
-    storageClass: ""  # optional, omit for cluster default
+    ## @param media.persistence.storageClass StorageClass for the media PVC. Leave empty to use the cluster default.
+    storageClass: ""
 
-# -- Email
+## @section Email
+
 email:
-  driver: noop # noop or smtp
-  from: "" # e.g. noreply@example.com
-
-# -- Migration Job (runs before server, uses same existingSecret)
-migrationJob:
-  enabled: true
+  ## @param email.driver Email driver. `noop` disables sending; `smtp` sends via SMTP (supply EMAIL_SMTP_USERNAME and EMAIL_SMTP_PASSWORD in the server secret).
+  driver: noop
+  ## @param email.from Sender address for outgoing email. Required when driver is smtp.
+  from: ""
+  ## @param email.fromName Display name for the sender. Defaults to the instance name.
+  fromName: Monstera
+  smtp:
+    ## @param email.smtp.host SMTP server hostname. Required when driver is smtp.
+    host: ""
+    ## @param email.smtp.port SMTP server port.
+    port: 587

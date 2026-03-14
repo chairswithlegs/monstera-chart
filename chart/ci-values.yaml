@@ -2,6 +2,7 @@
 server:
   existingSecret: "ci-dummy"
 instanceDomain: "ci.example.com"
-ui:
-  config:
-    server_url: "https://ci.example.com"
+uiDomain: "ci.example.com"
+postgresql:
+  auth:
+    existingSecret: "ci-dummy"

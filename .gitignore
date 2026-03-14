@@ -1,2 +1,7 @@
+# Helm files
 chart/Chart.lock
 chart/charts/
+
+# Claude settings
+.claude/settings.json
+.claude/settings.local.json
