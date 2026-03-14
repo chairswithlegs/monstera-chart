@@ -3,7 +3,7 @@
 
 ## @section Global
 
-## @param instanceName Display name for the instance, shown in the UI and API responses testing
+## @param instanceName Display name for the instance, shown in the UI and API responses
 instanceName: Monstera
 ## @param instanceDomain Public hostname of the instance (e.g. social.example.com). Required.
 instanceDomain: ""
