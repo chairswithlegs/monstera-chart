@@ -1,11 +1,6 @@
 name: Release Helm chart
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - "chart/**"
-      - ".github/workflows/release.yaml"
   workflow_dispatch:
 
 permissions:
