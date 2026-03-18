@@ -6,6 +6,7 @@ on:
     paths:
       - "chart/**"
       - ".github/workflows/release.yaml"
+  workflow_dispatch:
 
 permissions:
   contents: write
