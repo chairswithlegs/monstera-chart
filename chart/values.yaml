@@ -105,8 +105,10 @@ postgresql:
   auth:
     ## @param postgresql.auth.existingSecret Secret containing DATABASE_PASSWORD for the bundled PostgreSQL. Set to the same value as server.existingSecret.
     existingSecret: ""
-    ## @skip postgresql.auth.secretKeys.userPasswordKey
     secretKeys:
+      ## @skip postgresql.auth.secretKeys.adminPasswordKey
+      adminPasswordKey: DATABASE_PASSWORD
+      ## @skip postgresql.auth.secretKeys.userPasswordKey
       userPasswordKey: DATABASE_PASSWORD
     # Internal: used by Bitnami to bootstrap the DB user and database at init time.
     # Override only if you need non-default values; ensure DATABASE_USERNAME in your secret matches auth.username.
