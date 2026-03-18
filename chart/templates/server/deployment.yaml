@@ -47,7 +47,7 @@ spec:
           env:
             - name: INSTANCE_NAME
               value: {{ .Values.instanceName | quote }}
-            - name: INSTANCE_DOMAIN
+            - name: MONSTERA_INSTANCE_DOMAIN
               value: {{ .Values.instanceDomain | quote }}
             - name: APP_ENV
               value: {{ .Values.appEnv | quote }}
@@ -55,6 +55,8 @@ spec:
               value: {{ .Values.logLevel | quote }}
             - name: MONSTERA_UI_URL
               value: {{ include "monstera.ui.url" . | quote }}
+            - name: MONSTERA_SERVER_URL
+              value: {{ .Values.server.url | quote }}
             - name: CACHE_DRIVER
               value: memory
             - name: DATABASE_HOST
@@ -102,6 +104,24 @@ spec:
             - name: EMAIL_SMTP_PORT
               value: {{ .Values.email.smtp.port | quote }}
             {{- end }}
+            - name: FEDERATION_WORKER_CONCURRENCY
+              value: {{ .Values.federation.workerConcurrency | quote }}
+            {{- if .Values.push.vapidPublicKey }}
+            - name: VAPID_PUBLIC_KEY
+              value: {{ .Values.push.vapidPublicKey | quote }}
+            {{- end }}
+            - name: MAX_STATUS_CHARS
+              value: {{ .Values.limits.maxStatusChars | quote }}
+            - name: MAX_REQUEST_BODY_BYTES
+              value: {{ .Values.limits.maxRequestBodyBytes | quote }}
+            - name: RATE_LIMIT_AUTH_PER_WINDOW
+              value: {{ .Values.rateLimiting.authPerWindow | quote }}
+            - name: RATE_LIMIT_AUTH_WINDOW_SECONDS
+              value: {{ .Values.rateLimiting.authWindowSeconds | quote }}
+            - name: RATE_LIMIT_PUBLIC_PER_WINDOW
+              value: {{ .Values.rateLimiting.publicPerWindow | quote }}
+            - name: RATE_LIMIT_PUBLIC_WINDOW_SECONDS
+              value: {{ .Values.rateLimiting.publicWindowSeconds | quote }}
             {{- with .Values.server.extraEnv }}
             {{- toYaml . | nindent 12 }}
             {{- end }}

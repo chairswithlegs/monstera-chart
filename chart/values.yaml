@@ -7,8 +7,6 @@
 instanceName: Monstera
 ## @param instanceDomain Public hostname of the instance (e.g. social.example.com). Required.
 instanceDomain: ""
-## @param uiDomain Hostname for the UI. Defaults to instanceDomain if empty.
-uiDomain: ""
 ## @param appEnv Application environment. Use `production` for live deployments.
 appEnv: production
 ## @param logLevel Log verbosity. One of: debug, info, warn, error.
@@ -17,8 +15,10 @@ logLevel: info
 ## @section Server
 
 server:
-  ## @param server.existingSecret Name of a pre-existing Secret containing sensitive server config. Always required: SECRET_KEY_BASE, DATABASE_USERNAME, DATABASE_PASSWORD. Also required when nats.enabled is false: NATS_URL. Also required when email.driver is smtp: EMAIL_SMTP_USERNAME, EMAIL_SMTP_PASSWORD.
+  ## @param server.existingSecret Name of a pre-existing Secret containing sensitive server config. Always required: SECRET_KEY_BASE, DATABASE_USERNAME, DATABASE_PASSWORD. Also required when nats.enabled is false: NATS_URL. Also required when email.driver is smtp: EMAIL_SMTP_USERNAME, EMAIL_SMTP_PASSWORD. Optional for push notifications: VAPID_PRIVATE_KEY.
   existingSecret: ""
+  ## @param server.url Optional override for the server's public URL (MONSTERA_SERVER_URL). Defaults to the instance domain when empty.
+  url: ""
   image:
     ## @param server.image.repository Server container image repository
     repository: ghcr.io/chairswithlegs/monstera/server
@@ -59,6 +59,8 @@ server:
 ## @section UI
 
 ui:
+  ## @param ui.url Full URL for the UI (e.g. https://social.example.com). Defaults to https://<instanceDomain> if empty.
+  url: ""
   image:
     ## @param ui.image.repository UI container image repository
     repository: ghcr.io/chairswithlegs/monstera/ui
@@ -136,6 +138,11 @@ nats:
         enabled: true
         ## @param nats.config.jetstream.fileStore.dir Directory for JetStream file storage
         dir: /data
+      memoryStore:
+        ## @param nats.config.jetstream.memoryStore.enabled Enable memory-backed JetStream storage. Required for KV bucket creation even when fileStore is the primary backend.
+        enabled: true
+        ## @param nats.config.jetstream.memoryStore.maxSize Maximum memory JetStream may use for in-memory streams/KV
+        maxSize: 128Mi
       pvc:
         ## @param nats.config.jetstream.pvc.enabled Enable PVC for JetStream persistence
         enabled: true
@@ -169,6 +176,38 @@ media:
     size: 10Gi
     ## @param media.persistence.storageClass StorageClass for the media PVC. Leave empty to use the cluster default.
     storageClass: ""
+
+## @section Federation
+
+federation:
+  ## @param federation.workerConcurrency Number of concurrent federation worker goroutines
+  workerConcurrency: 5
+
+## @section Push Notifications
+
+push:
+  ## @param push.vapidPublicKey VAPID public key for Web Push notifications. Supply VAPID_PRIVATE_KEY in server.existingSecret.
+  vapidPublicKey: ""
+
+## @section Limits
+
+limits:
+  ## @param limits.maxStatusChars Maximum character length for a status post
+  maxStatusChars: 500
+  ## @param limits.maxRequestBodyBytes Maximum allowed request body size in bytes
+  maxRequestBodyBytes: 1048576
+
+## @section Rate Limiting
+
+rateLimiting:
+  ## @param rateLimiting.authPerWindow Maximum authenticated requests per window
+  authPerWindow: 300
+  ## @param rateLimiting.authWindowSeconds Duration of the authenticated rate-limit window in seconds
+  authWindowSeconds: 300
+  ## @param rateLimiting.publicPerWindow Maximum unauthenticated requests per window
+  publicPerWindow: 300
+  ## @param rateLimiting.publicWindowSeconds Duration of the unauthenticated rate-limit window in seconds
+  publicWindowSeconds: 300
 
 ## @section Email
 
