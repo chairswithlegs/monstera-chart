@@ -58,31 +58,32 @@ helm install monstera chart/ -f myvalues.yaml -n <namespace>
 | ---------------- | -------------------------------------------------------------------- | ------------ |
 | `instanceName`   | Display name for the instance, shown in the UI and API responses     | `Monstera`   |
 | `instanceDomain` | Public hostname of the instance (e.g. social.example.com). Required. | `""`         |
-| `uiDomain`       | Hostname for the UI. Defaults to instanceDomain if empty.            | `""`         |
 | `appEnv`         | Application environment. Use `production` for live deployments.      | `production` |
 | `logLevel`       | Log verbosity. One of: debug, info, warn, error.                     | `info`       |
 
 ### Server
 
-| Name                         | Description                                                                                                                                                                                                                                                                      | Value                                    |
-| ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
-| `server.existingSecret`      | Name of a pre-existing Secret containing sensitive server config. Always required: SECRET_KEY_BASE, DATABASE_USERNAME, DATABASE_PASSWORD. Also required when nats.enabled is false: NATS_URL. Also required when email.driver is smtp: EMAIL_SMTP_USERNAME, EMAIL_SMTP_PASSWORD. | `""`                                     |
-| `server.image.repository`    | Server container image repository                                                                                                                                                                                                                                                | `ghcr.io/chairswithlegs/monstera/server` |
-| `server.image.tag`           | Server container image tag                                                                                                                                                                                                                                                       | `latest`                                 |
-| `server.image.pullPolicy`    | Server container image pull policy                                                                                                                                                                                                                                               | `IfNotPresent`                           |
-| `server.replicaCount`        | Number of server pod replicas                                                                                                                                                                                                                                                    | `1`                                      |
-| `server.resources`           | CPU/memory resource requests and limits for the server container                                                                                                                                                                                                                 | `{}`                                     |
-| `server.extraEnv`            | Extra environment variables to inject into server pods                                                                                                                                                                                                                           | `[]`                                     |
-| `server.ingress.enabled`     | Enable Ingress for the server API                                                                                                                                                                                                                                                | `false`                                  |
-| `server.ingress.className`   | Ingress class name for the server Ingress                                                                                                                                                                                                                                        | `""`                                     |
-| `server.ingress.annotations` | Annotations for the server Ingress                                                                                                                                                                                                                                               | `{}`                                     |
-| `server.ingress.hosts`       | Host rules for the server Ingress. Each entry defines a `host` and `paths` array (path, pathType). Default paths: /api, /oauth, /.well-known, /users, /inbox.                                                                                                                    | `[]`                                     |
-| `server.ingress.tls`         | TLS configuration for the server Ingress                                                                                                                                                                                                                                         | `[]`                                     |
+| Name                         | Description                                                                                                                                                                                                                                                                                                                          | Value                                    |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------- |
+| `server.existingSecret`      | Name of a pre-existing Secret containing sensitive server config. Always required: SECRET_KEY_BASE, DATABASE_USERNAME, DATABASE_PASSWORD. Also required when nats.enabled is false: NATS_URL. Also required when email.driver is smtp: EMAIL_SMTP_USERNAME, EMAIL_SMTP_PASSWORD. Optional for push notifications: VAPID_PRIVATE_KEY. | `""`                                     |
+| `server.url`                 | Optional override for the server's public URL (MONSTERA_SERVER_URL). Defaults to the instance domain when empty.                                                                                                                                                                                                                     | `""`                                     |
+| `server.image.repository`    | Server container image repository                                                                                                                                                                                                                                                                                                    | `ghcr.io/chairswithlegs/monstera/server` |
+| `server.image.tag`           | Server container image tag                                                                                                                                                                                                                                                                                                           | `latest`                                 |
+| `server.image.pullPolicy`    | Server container image pull policy                                                                                                                                                                                                                                                                                                   | `IfNotPresent`                           |
+| `server.replicaCount`        | Number of server pod replicas                                                                                                                                                                                                                                                                                                        | `1`                                      |
+| `server.resources`           | CPU/memory resource requests and limits for the server container                                                                                                                                                                                                                                                                     | `{}`                                     |
+| `server.extraEnv`            | Extra environment variables to inject into server pods                                                                                                                                                                                                                                                                               | `[]`                                     |
+| `server.ingress.enabled`     | Enable Ingress for the server API                                                                                                                                                                                                                                                                                                    | `false`                                  |
+| `server.ingress.className`   | Ingress class name for the server Ingress                                                                                                                                                                                                                                                                                            | `""`                                     |
+| `server.ingress.annotations` | Annotations for the server Ingress                                                                                                                                                                                                                                                                                                   | `{}`                                     |
+| `server.ingress.hosts`       | Host rules for the server Ingress. Each entry defines a `host` and `paths` array (path, pathType). Default paths: /api, /oauth, /.well-known, /users, /inbox.                                                                                                                                                                        | `[]`                                     |
+| `server.ingress.tls`         | TLS configuration for the server Ingress                                                                                                                                                                                                                                                                                             | `[]`                                     |
 
 ### UI
 
 | Name                     | Description                                                                                                     | Value                                |
 | ------------------------ | --------------------------------------------------------------------------------------------------------------- | ------------------------------------ |
+| `ui.url`                 | Full URL for the UI (e.g. https://social.example.com). Defaults to https://<instanceDomain> if empty.           | `""`                                 |
 | `ui.image.repository`    | UI container image repository                                                                                   | `ghcr.io/chairswithlegs/monstera/ui` |
 | `ui.image.tag`           | UI container image tag                                                                                          | `latest`                             |
 | `ui.image.pullPolicy`    | UI container image pull policy                                                                                  | `IfNotPresent`                       |
@@ -112,15 +113,17 @@ helm install monstera chart/ -f myvalues.yaml -n <namespace>
 
 ### NATS
 
-| Name                                      | Description                                                                                                                                                                                                        | Value   |
-| ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------- |
-| `nats.enabled`                            | Deploy the NATS subchart with JetStream. When false, supply NATS_URL in the server secret. When true, NATS_URL is injected automatically (no auth by default; add nats.config.merge.authorization to enable auth). | `true`  |
-| `nats.natsBox.enabled`                    | Deploy the NATS Box subchart. When false, supply NATS_URL in the server secret. When true, NATS_URL is injected automatically (no auth by default; add nats.config.merge.authorization to enable auth).            | `false` |
-| `nats.config.jetstream.enabled`           | Enable JetStream                                                                                                                                                                                                   | `true`  |
-| `nats.config.jetstream.fileStore.enabled` | Enable file-backed JetStream storage                                                                                                                                                                               | `true`  |
-| `nats.config.jetstream.fileStore.dir`     | Directory for JetStream file storage                                                                                                                                                                               | `/data` |
-| `nats.config.jetstream.pvc.enabled`       | Enable PVC for JetStream persistence                                                                                                                                                                               | `true`  |
-| `nats.config.jetstream.pvc.size`          | PVC size for JetStream data                                                                                                                                                                                        | `10Gi`  |
+| Name                                        | Description                                                                                                                                                                                                        | Value   |
+| ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------- |
+| `nats.enabled`                              | Deploy the NATS subchart with JetStream. When false, supply NATS_URL in the server secret. When true, NATS_URL is injected automatically (no auth by default; add nats.config.merge.authorization to enable auth). | `true`  |
+| `nats.natsBox.enabled`                      | Deploy the NATS Box subchart. When false, supply NATS_URL in the server secret. When true, NATS_URL is injected automatically (no auth by default; add nats.config.merge.authorization to enable auth).            | `false` |
+| `nats.config.jetstream.enabled`             | Enable JetStream                                                                                                                                                                                                   | `true`  |
+| `nats.config.jetstream.fileStore.enabled`   | Enable file-backed JetStream storage                                                                                                                                                                               | `true`  |
+| `nats.config.jetstream.fileStore.dir`       | Directory for JetStream file storage                                                                                                                                                                               | `/data` |
+| `nats.config.jetstream.memoryStore.enabled` | Enable memory-backed JetStream storage. Required for KV bucket creation even when fileStore is the primary backend.                                                                                                | `true`  |
+| `nats.config.jetstream.memoryStore.maxSize` | Maximum memory JetStream may use for in-memory streams/KV                                                                                                                                                          | `128Mi` |
+| `nats.config.jetstream.pvc.enabled`         | Enable PVC for JetStream persistence                                                                                                                                                                               | `true`  |
+| `nats.config.jetstream.pvc.size`            | PVC size for JetStream data                                                                                                                                                                                        | `10Gi`  |
 
 ### Media
 
@@ -137,6 +140,34 @@ helm install monstera chart/ -f myvalues.yaml -n <namespace>
 | `media.persistence.enabled`      | Enable PVC for local media storage                                                                    | `true`        |
 | `media.persistence.size`         | PVC size for local media                                                                              | `10Gi`        |
 | `media.persistence.storageClass` | StorageClass for the media PVC. Leave empty to use the cluster default.                               | `""`          |
+
+### Federation
+
+| Name                           | Description                                       | Value |
+| ------------------------------ | ------------------------------------------------- | ----- |
+| `federation.workerConcurrency` | Number of concurrent federation worker goroutines | `5`   |
+
+### Push Notifications
+
+| Name                  | Description                                                                                     | Value |
+| --------------------- | ----------------------------------------------------------------------------------------------- | ----- |
+| `push.vapidPublicKey` | VAPID public key for Web Push notifications. Supply VAPID_PRIVATE_KEY in server.existingSecret. | `""`  |
+
+### Limits
+
+| Name                         | Description                                | Value     |
+| ---------------------------- | ------------------------------------------ | --------- |
+| `limits.maxStatusChars`      | Maximum character length for a status post | `500`     |
+| `limits.maxRequestBodyBytes` | Maximum allowed request body size in bytes | `1048576` |
+
+### Rate Limiting
+
+| Name                               | Description                                                  | Value |
+| ---------------------------------- | ------------------------------------------------------------ | ----- |
+| `rateLimiting.authPerWindow`       | Maximum authenticated requests per window                    | `300` |
+| `rateLimiting.authWindowSeconds`   | Duration of the authenticated rate-limit window in seconds   | `300` |
+| `rateLimiting.publicPerWindow`     | Maximum unauthenticated requests per window                  | `300` |
+| `rateLimiting.publicWindowSeconds` | Duration of the unauthenticated rate-limit window in seconds | `300` |
 
 ### Email
 
