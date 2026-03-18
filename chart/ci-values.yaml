@@ -1,8 +1,10 @@
 # CI-only values for helm template; do not use for real installs.
 server:
+  url: "https://ci.api.example.com"
   existingSecret: "ci-dummy"
 instanceDomain: "ci.example.com"
-uiDomain: "ci.example.com"
+ui:
+  url: "https://ci.example.com"
 postgresql:
   auth:
     existingSecret: "ci-dummy"

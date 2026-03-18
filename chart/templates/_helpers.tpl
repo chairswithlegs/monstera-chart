@@ -68,11 +68,10 @@ Server URL (public API base URL, always uses instanceDomain)
 {{- end }}
 
 {{/*
-UI URL (falls back to instanceDomain if uiDomain is not set)
+UI URL (falls back to https://<instanceDomain> if ui.url is not set)
 */}}
 {{- define "monstera.ui.url" -}}
-{{- $domain := .Values.uiDomain | default .Values.instanceDomain }}
-{{- printf "https://%s" $domain }}
+{{- .Values.ui.url | default (printf "https://%s" .Values.instanceDomain) }}
 {{- end }}
 
 {{/*
